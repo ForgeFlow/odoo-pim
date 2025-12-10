@@ -4,7 +4,11 @@
 #
 msgid ""
 msgstr ""
+<<<<<<< HEAD
 "Project-Id-Version: Odoo Server 19.0\n"
+=======
+"Project-Id-Version: Odoo Server 18.0\n"
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 "Report-Msgid-Bugs-To: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -49,6 +53,11 @@ msgstr ""
 
 #. module: attribute_set
 #: model:ir.model,name:attribute_set.model_attribute_option
+<<<<<<< HEAD
+=======
+#: model_terms:ir.ui.view,arch_db:attribute_set.attribute_option_form_popup_view
+#: model_terms:ir.ui.view,arch_db:attribute_set.attribute_option_form_view
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 msgid "Attribute Option"
 msgstr ""
 
@@ -64,9 +73,12 @@ msgstr ""
 #. module: attribute_set
 #: model:ir.model,name:attribute_set.model_attribute_set
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_set_owner_mixin__attribute_set_id
+<<<<<<< HEAD
 #: model:ir.model.fields,field_description:attribute_set.field_res_country__attribute_set_id
 #: model:ir.model.fields,field_description:attribute_set.field_res_partner__attribute_set_id
 #: model:ir.model.fields,field_description:attribute_set.field_res_users__attribute_set_id
+=======
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 #: model_terms:ir.ui.view,arch_db:attribute_set.attribute_set_form_view
 msgid "Attribute Set"
 msgstr ""
@@ -101,7 +113,11 @@ msgstr ""
 
 #. module: attribute_set
 #: model:ir.model.fields.selection,name:attribute_set.selection__attribute_attribute__attribute_type__binary
+<<<<<<< HEAD
 msgid "Binary (file)"
+=======
+msgid "Binary"
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 msgstr ""
 
 #. module: attribute_set
@@ -172,26 +188,40 @@ msgid "Company Dependent"
 msgstr ""
 
 #. module: attribute_set
+<<<<<<< HEAD
+=======
+#: model:ir.model.fields,field_description:attribute_set.field_attribute_attribute__complete_name
+msgid "Complete Name"
+msgstr ""
+
+#. module: attribute_set
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_attribute__compute
 msgid "Compute"
 msgstr ""
 
 #. module: attribute_set
+<<<<<<< HEAD
 #: model:ir.model,name:attribute_set.model_res_partner
 msgid "Contact"
 msgstr ""
 
 #. module: attribute_set
+=======
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_attribute__copied
 msgid "Copied"
 msgstr ""
 
 #. module: attribute_set
+<<<<<<< HEAD
 #: model:ir.model,name:attribute_set.model_res_country
 msgid "Country"
 msgstr ""
 
 #. module: attribute_set
+=======
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_attribute__create_uid
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_group__create_uid
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_option__create_uid
@@ -257,9 +287,12 @@ msgstr ""
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_option__display_name
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_option_wizard__display_name
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_set__display_name
+<<<<<<< HEAD
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_set_owner_mixin__display_name
 #: model:ir.model.fields,field_description:attribute_set.field_res_country__display_name
 #: model:ir.model.fields,field_description:attribute_set.field_res_partner__display_name
+=======
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 msgid "Display Name"
 msgstr ""
 
@@ -337,9 +370,12 @@ msgstr ""
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_option__id
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_option_wizard__id
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_set__id
+<<<<<<< HEAD
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_set_owner_mixin__id
 #: model:ir.model.fields,field_description:attribute_set.field_res_country__id
 #: model:ir.model.fields,field_description:attribute_set.field_res_partner__id
+=======
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 msgid "ID"
 msgstr ""
 
@@ -386,11 +422,14 @@ msgid ""
 msgstr ""
 
 #. module: attribute_set
+<<<<<<< HEAD
 #: model:ir.model.fields.selection,name:attribute_set.selection__attribute_attribute__attribute_type__image
 msgid "Image"
 msgstr ""
 
 #. module: attribute_set
+=======
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 #: model:ir.model.fields,field_description:attribute_set.field_attribute_attribute__modules
 msgid "In Apps"
 msgstr ""
@@ -412,6 +451,19 @@ msgstr ""
 
 #. module: attribute_set
 #. odoo-python
+<<<<<<< HEAD
+=======
+#: code:addons/attribute_set/models/attribute_set_owner.py:0
+msgid ""
+"It is impossible to add Attributes on \"%(name)s\" xml\n"
+"                    view as there is\n"
+"                    not one \"<separator name=\"attributes_placeholder\" />\" in it.\n"
+"                    "
+msgstr ""
+
+#. module: attribute_set
+#. odoo-python
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 #: code:addons/attribute_set/models/attribute_attribute.py:0
 msgid ""
 "It is not allowed to change the boolean 'Serialized'.\n"
@@ -443,7 +495,10 @@ msgstr ""
 
 #. module: attribute_set
 #: model_terms:ir.ui.view,arch_db:attribute_set.attribute_attribute_form_view
+<<<<<<< HEAD
 #: model_terms:ir.ui.view,arch_db:attribute_set.attribute_option_wizard_form_view
+=======
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 msgid "Load Attribute Options"
 msgstr ""
 
@@ -495,6 +550,10 @@ msgstr ""
 #. module: attribute_set
 #. odoo-python
 #: code:addons/attribute_set/models/attribute_attribute.py:0
+<<<<<<< HEAD
+=======
+#: model_terms:ir.ui.view,arch_db:attribute_set.attribute_option_wizard_form_view
+>>>>>>> 3b9e180 ([MIG] The four PIM modules)
 msgid "Options Wizard"
 msgstr ""
 
