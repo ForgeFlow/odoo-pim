@@ -14,8 +14,50 @@ class AttributeAttribute(models.Model):
     e_com_visibility = fields.Boolean(
         string="E-Commerce Visibility",
         default=False,
-        help="""If selected the attribute will be shown in e-commerce website app.""",
+        help="""If selected, the attribute will be shown in e-commerce website app.""",
     )
+    is_filter = fields.Boolean(
+        default=False,
+        help="""If selected, the attribute will be shown as a filter
+         in e-commerce website app (and appear in search).""",
+    )
+    is_specification = fields.Boolean(
+        default=False,
+        help="""If selected, the attribute will be shown as specification
+             in e-commerce website app product view.""",
+    )
+
+    @api.constrains("is_filter")
+    def _check_is_filter(self):
+        for rec in self:
+            if rec.is_filter and not rec.e_com_visibility:
+                raise ValidationError(
+                    self.env._(
+                        "Cannot use attribute as filter "
+                        "if it doesn't have E-Commerce Visibility enabled."
+                    )
+                )
+
+    @api.constrains("is_specification")
+    def _check_is_specification(self):
+        for rec in self:
+            if rec.is_specification and not rec.e_com_visibility:
+                raise ValidationError(
+                    self.env._(
+                        "Cannot use attribute as specification "
+                        "if it doesn't have E-Commerce Visibility enabled."
+                    )
+                )
+
+    @api.onchange("e_com_visibility")
+    def onchange_e_com_visibility(self):
+        for rec in self:
+            if rec.e_com_visibility:
+                rec.is_filter = True
+                rec.is_specification = True
+            else:
+                rec.is_filter = False
+                rec.is_specification = False
 
     @api.constrains("domain")
     def _validate_domain(self):

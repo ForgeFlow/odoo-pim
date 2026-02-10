@@ -132,11 +132,13 @@ class TestAttributeSetSearchable(BuildViewCase):
         self.product_1.x_processor = test_option
         self.product_1.write({"x_technical_description": "Fast processor"})
         self.attr_1.write({"e_com_visibility": True})
+        self.attr_1.onchange_e_com_visibility()
         extra_attrs = self.product_1.get_extra_attributes()
         self.assertTrue(
             len(extra_attrs) == 1 and extra_attrs.mapped("name") == ["x_processor"]
         )
         self.attr_2.write({"e_com_visibility": True})
+        self.attr_2.onchange_e_com_visibility()
         extra_attrs = self.product_1.get_extra_attributes()
         self.assertTrue(
             len(extra_attrs) == 2
@@ -151,10 +153,12 @@ class TestAttributeSetSearchable(BuildViewCase):
         # if they are select or multi-select then
         # they need relation_model_id value
         self.attr_1.write({"e_com_visibility": True})
+        self.attr_1.onchange_e_com_visibility()
         domain = search_extra(self.env, "Fast processor")
         self.assertEqual(list(domain), [(0, "=", 1)])
         # attributes are visible in e-com
         self.attr_2.write({"e_com_visibility": True})
+        self.attr_2.onchange_e_com_visibility()
         domain = search_extra(self.env, "Fast processor")
         self.assertEqual(
             list(domain), [("x_technical_description", "ilike", "Fast processor")]
@@ -162,6 +166,7 @@ class TestAttributeSetSearchable(BuildViewCase):
         # select, multi-select attributes are visible in e-com as
         # they have relation_model_id value
         self.attr_3.write({"e_com_visibility": True})
+        self.attr_3.onchange_e_com_visibility()
         domain = search_extra(self.env, "Fast processor")
         self.assertEqual(
             list(domain),
@@ -213,7 +218,9 @@ class TestAttributeSetSearchable(BuildViewCase):
             self.assertEqual(i["count"], 0)
         # custom attributes appear in e-com search of we set visibility
         self.attr_2.write({"e_com_visibility": True})
+        self.attr_2.onchange_e_com_visibility()
         self.attr_3.write({"e_com_visibility": True})
+        self.attr_3.onchange_e_com_visibility()
         results = (
             self.env["website"]
             .browse(1)
@@ -255,6 +262,7 @@ class TestAttributeSetSearchable(BuildViewCase):
         # ordered dict exists if products are visible in e-com
         self.product_1.write({"x_technical_description": "Fast processor"})
         self.attr_1.write({"e_com_visibility": True})
+        self.attr_1.onchange_e_com_visibility()
         groups = product_1._prepare_additional_attributes_for_display()
         self.assertTrue(self.group_1 in groups)
         self.assertTrue(self.attr_1 in groups[self.group_1])

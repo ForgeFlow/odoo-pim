@@ -14,7 +14,9 @@ _logger = logging.getLogger(__name__)
 def search_extra(env, search_term):
     extra_domains = []
     attributes = (
-        env["attribute.attribute"].sudo().search([("e_com_visibility", "=", True)])
+        env["attribute.attribute"]
+        .sudo()
+        .search([("e_com_visibility", "=", True), ("is_filter", "=", True)])
     )
     for attribute in attributes:
         if attribute.attribute_type in ["char", "text"]:
