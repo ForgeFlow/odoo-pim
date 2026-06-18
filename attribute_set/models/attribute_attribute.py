@@ -261,9 +261,9 @@ class AttributeAttribute(models.Model):
 
     @api.depends("model_id")
     def _compute_allowed_attribute_set_ids(self):
-        AttributeSet = self.env["attribute.set"]
+        AttributeSet = self.env["attribute.set"].sudo()
         for record in self:
-            allowed_models = record._get_attribute_set_allowed_model()
+            allowed_models = record.sudo()._get_attribute_set_allowed_model()
             record.allowed_attribute_set_ids = AttributeSet.search(
                 [("model_id", "in", allowed_models.ids)]
             )
