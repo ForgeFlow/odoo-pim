@@ -1,8 +1,12 @@
 # Copyright 2026 ForgeFlow (http://www.forgeflow.com).
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
+from odoo.fields import Domain
 from odoo.tests import HttpCase, TransactionCase, tagged
 
+from odoo.addons.website_sale.tests.common import MockRequest
+
+from ..controllers.main import WebsiteSale
 from ..models.mixins import build_range_filter_domains
 
 
@@ -69,6 +73,52 @@ class _RangeFilterSetup:
                 "x_range_capacity": 500,
             }
         )
+        # Select (many2one) attribute: its column is NULL when unset, so it
+        # needs no attribute-set scoping to exclude non-carriers.
+        cls.attr_material = cls.env["attribute.attribute"].create(
+            {
+                "nature": "custom",
+                "field_description": "Range Material",
+                "name": "x_range_material",
+                "attribute_type": "select",
+                "attribute_group_id": cls.attr_group.id,
+                "attribute_set_ids": [(4, cls.attr_set.id)],
+                "model_id": product_model.id,
+                "e_com_visibility": True,
+                "e_com_filter": True,
+            }
+        )
+        cls.material_option = cls.env["attribute.option"].create(
+            {"name": "Steel", "attribute_id": cls.attr_material.id}
+        )
+        # Carries the select value but sits on no attribute set at all.
+        cls.product_no_set_with_option = ProductTemplate.create(
+            {
+                "name": "No Set But Has Material",
+                "is_published": True,
+                "website_id": cls.website.id,
+                "x_range_material": cls.material_option.id,
+            }
+        )
+
+        # Child set: it inherits ``x_range_capacity`` from its parent without
+        # the attribute being assigned to it directly.
+        cls.attr_set_child = cls.env["attribute.set"].create(
+            {
+                "name": "Range Attribute Child Set",
+                "model_id": product_model.id,
+                "parent_id": cls.attr_set.id,
+            }
+        )
+        cls.product_child_set = ProductTemplate.create(
+            {
+                "name": "Child Set Product",
+                "is_published": True,
+                "website_id": cls.website.id,
+                "attribute_set_id": cls.attr_set_child.id,
+                "x_range_capacity": 60,
+            }
+        )
         # Product without the attribute set: it does NOT carry the attribute,
         # but x_range_capacity is a real column defaulting to 0, so a
         # ``>= 0``/negative filter must NOT pick it up.
@@ -90,7 +140,7 @@ class TestBuildRangeFilterDomains(TransactionCase, _RangeFilterSetup):
         cls._setup_common()
 
     def test_min_and_max_returns_one_combined_sub_domain(self):
-        set_ids = self.attr_capacity.attribute_set_ids.ids
+        set_ids = self.attr_capacity._get_all_set_ids()
         domains = build_range_filter_domains(
             self.env, {self.attr_capacity.id: {"min": 50, "max": 100}}
         )
@@ -120,8 +170,19 @@ class TestBuildRangeFilterDomains(TransactionCase, _RangeFilterSetup):
         self.assertIn(self.product_below_range, matches)
         self.assertNotIn(self.product_no_attr_set, matches)
 
+    def test_child_set_products_are_matched(self):
+        """Regression: an attribute assigned to a parent set is inherited by
+        its child sets, so products on a child set must survive the filter."""
+        domains = build_range_filter_domains(
+            self.env, {self.attr_capacity.id: {"min": 50, "max": 100}}
+        )
+        matches = self.env["product.template"].search(domains[0])
+        self.assertIn(self.product_child_set, matches)
+        self.assertIn(self.product_in_range, matches)
+        self.assertNotIn(self.product_no_attr_set, matches)
+
     def test_only_min_or_only_max(self):
-        set_ids = self.attr_capacity.attribute_set_ids.ids
+        set_ids = self.attr_capacity._get_all_set_ids()
         only_min = build_range_filter_domains(
             self.env, {self.attr_capacity.id: {"min": 50}}
         )
@@ -284,7 +345,7 @@ class TestSearchGetDetailsWithRangeFilter(TransactionCase, _RangeFilterSetup):
             d for d in details if d.get("model") == "product.template"
         )
         base_domain = product_detail["base_domain"]
-        set_ids = self.attr_capacity.attribute_set_ids.ids
+        set_ids = self.attr_capacity._get_all_set_ids()
         self.assertIn(
             [
                 ("attribute_set_id", "in", set_ids),
@@ -293,6 +354,96 @@ class TestSearchGetDetailsWithRangeFilter(TransactionCase, _RangeFilterSetup):
             ],
             base_domain,
         )
+
+    def test_search_get_details_value_filter_spans_child_sets(self):
+        """Regression: the website search value filter must scope to the
+        attribute's descendant sets, not only its directly assigned ones."""
+        options = self._base_options(
+            additional_attribute_values=[(self.attr_capacity.id, "60")]
+        )
+        details = self.website._search_get_details(
+            "products_only", "name asc, id", options
+        )
+        product_detail = next(
+            d for d in details if d.get("model") == "product.template"
+        )
+        scope_leaf = next(
+            leaf
+            for domain in product_detail["base_domain"]
+            for leaf in domain
+            if leaf[0] == "attribute_set_id"
+        )
+        self.assertIn(self.attr_set.id, scope_leaf[2])
+        self.assertIn(
+            self.attr_set_child.id,
+            scope_leaf[2],
+            "Child attribute sets must be part of the value filter scope",
+        )
+
+
+class TestShopValueFilterScope(TransactionCase, _RangeFilterSetup):
+    """The shop grid value filter must span the attribute-set hierarchy."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._setup_common()
+
+    def test_value_filter_matches_products_on_child_attribute_set(self):
+        """Regression: an attribute assigned to a parent set is rendered as a
+        facet for products on any child set, so clicking one of its values must
+        not drop them from the results."""
+        with MockRequest(self.env, website=self.website):
+            conditions = WebsiteSale()._build_value_filter_conditions(
+                [(self.attr_capacity.id, "60")]
+            )
+        scope_leaf = next(
+            leaf
+            for domain in conditions
+            for leaf in domain
+            if leaf[0] == "attribute_set_id"
+        )
+        self.assertIn(self.attr_set.id, scope_leaf[2])
+        self.assertIn(
+            self.attr_set_child.id,
+            scope_leaf[2],
+            "Child attribute sets must be part of the value filter scope",
+        )
+
+        matches = self.env["product.template"].search(Domain.AND(conditions))
+        self.assertIn(self.product_child_set, matches)
+        self.assertIn(self.product_in_range, matches)
+        self.assertNotIn(self.product_no_attr_set, matches)
+
+    def test_select_filter_matches_product_without_attribute_set(self):
+        """A relational column is NULL when the attribute is not carried, so a
+        select filter needs no attribute-set scope and must not drop products
+        that hold the value while sitting on no set."""
+        with MockRequest(self.env, website=self.website):
+            conditions = WebsiteSale()._build_value_filter_conditions(
+                [(self.attr_material.id, str(self.material_option.id))]
+            )
+        self.assertFalse(
+            [
+                leaf
+                for domain in conditions
+                for leaf in domain
+                if leaf[0] == "attribute_set_id"
+            ],
+            "A select filter must not be scoped by attribute set",
+        )
+        matches = self.env["product.template"].search(Domain.AND(conditions))
+        self.assertIn(self.product_no_set_with_option, matches)
+        self.assertNotIn(self.product_in_range, matches)
+
+    def test_numeric_filter_keeps_attribute_set_scope(self):
+        """Integer columns default to 0, so the scope leaf must stay for them."""
+        with MockRequest(self.env, website=self.website):
+            conditions = WebsiteSale()._build_value_filter_conditions(
+                [(self.attr_capacity.id, "0")]
+            )
+        matches = self.env["product.template"].search(Domain.AND(conditions))
+        self.assertNotIn(self.product_no_attr_set, matches)
 
 
 @tagged("post_install", "-at_install")

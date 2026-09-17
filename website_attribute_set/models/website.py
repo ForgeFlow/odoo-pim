@@ -6,7 +6,11 @@ import re
 
 from odoo import api, models
 
-from .mixins import _sparse_filter_by_value, build_range_filter_domains
+from .mixins import (
+    _sparse_filter_by_value,
+    attribute_set_scope_leaves,
+    build_range_filter_domains,
+)
 
 
 class Website(models.Model):
@@ -32,6 +36,16 @@ class Website(models.Model):
                         continue
                     base_domain.extend(range_domains)
         if additional_attrib_values and not isinstance(additional_attrib_values, str):
+            # Child attribute sets inherit their parent's attributes, so the
+            # ``attribute_set_id`` scope below must span the whole descendant
+            # hierarchy. Resolve it once for every filtered attribute.
+            set_ids_per_attribute = (
+                self.env["attribute.attribute"]
+                .sudo()
+                .browse([a[0] for a in additional_attrib_values])
+                .exists()
+                ._get_all_set_ids_per_attribute()
+            )
             for value in values:
                 base_domain = value.get("base_domain")
                 for additional_attrib in additional_attrib_values:
@@ -63,10 +77,9 @@ class Website(models.Model):
                             base_domain.append(
                                 [
                                     ("id", "in", ids),
-                                    (
-                                        "attribute_set_id",
-                                        "in",
-                                        attribute_field.attribute_set_ids.ids,
+                                    *attribute_set_scope_leaves(
+                                        attribute_field,
+                                        set_ids_per_attribute.get(attribute_id, ()),
                                     ),
                                 ]
                             )
@@ -84,13 +97,13 @@ class Website(models.Model):
                             search_rec_value = (
                                 self.env[model_name].sudo().browse(int(model_id))
                             )
+                            # Relational columns are NULL when the product
+                            # does not carry the attribute, so this leaf alone
+                            # already excludes non-carriers. Scoping by
+                            # attribute set here would only drop products that
+                            # hold the value but sit on no set at all.
                             additional_attrib_domain = [
                                 (attribute_name, "in", [search_rec_value.id]),
-                                (
-                                    "attribute_set_id",
-                                    "in",
-                                    attribute_field.attribute_set_ids.ids,
-                                ),
                             ]
                             base_domain.append(additional_attrib_domain)
                     else:
@@ -103,10 +116,9 @@ class Website(models.Model):
                             )
                         additional_attrib_domain = [
                             (attribute_name, "=", additional_attrib_value),
-                            (
-                                "attribute_set_id",
-                                "in",
-                                attribute_field.attribute_set_ids.ids,
+                            *attribute_set_scope_leaves(
+                                attribute_field,
+                                set_ids_per_attribute.get(attribute_id, ()),
                             ),
                         ]
                         base_domain.append(additional_attrib_domain)

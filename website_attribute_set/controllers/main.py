@@ -16,6 +16,7 @@ from ..models.mixins import (
     FACET_CACHE_VERSION_PARAM,
     _parse_relational_id,
     _sparse_filter_by_value,
+    attribute_set_scope_leaves,
     build_range_filter_domains,
 )
 
@@ -462,6 +463,14 @@ class WebsiteSale(main.WebsiteSale):
         for attr_id, attr_value in attrib_values:
             attr_values_grouped.setdefault(attr_id, []).append(attr_value)
 
+        # Resolve the attribute-set hierarchy once for every filtered
+        # attribute instead of once per attribute inside the loop.
+        set_ids_per_attribute = (
+            Attribute.browse(list(attr_values_grouped))
+            .exists()
+            ._get_all_set_ids_per_attribute()
+        )
+
         for attr_id, values in attr_values_grouped.items():
             attribute = Attribute.browse(attr_id)
             if not attribute.exists() or not attribute.field_is_searchable:
@@ -517,13 +526,16 @@ class WebsiteSale(main.WebsiteSale):
                         attr_conditions.append(cond)
             if attr_conditions:
                 conditions.extend(attr_conditions)
-                # The underlying field exists on every product.template
-                # (native attributes are real fields), so scope the filter to
-                # the products whose attribute set actually carries this
-                # attribute — the same products the facet is rendered for.
-                conditions.append(
-                    [("attribute_set_id", "in", attribute.attribute_set_ids.ids)]
+                # Types with a non-null column default (integer, float,
+                # boolean) match products that don't carry the attribute at
+                # all, so scope those to the sets that actually carry it — the
+                # same products the facet is rendered for. The scope spans the
+                # descendant sets, since child sets inherit their parent's
+                # attributes, exactly like the facet rendering path does.
+                scope_leaves = attribute_set_scope_leaves(
+                    attribute, set_ids_per_attribute[attr_id]
                 )
+                conditions.extend([leaf] for leaf in scope_leaves)
         return conditions
 
     def _build_attribute_condition(self, field_name, attr_type, attr_value):

@@ -139,6 +139,39 @@ def _sparse_filter_by_range(env, model_name, sparse_col, field_name, range_vals)
     return [row[0] for row in env.cr.fetchall()]
 
 
+# Attribute types whose ``product.template`` column is NULL when the product
+# does not carry the attribute. Relational columns (select -> many2one,
+# multiselect -> many2many) have no non-null default, so an equality leaf
+# already excludes non-carriers on its own.
+RELATIONAL_ATTRIBUTE_TYPES = ("select", "multiselect")
+
+
+def needs_attribute_set_scope(attribute):
+    """Whether a value filter on ``attribute`` must be scoped by attribute set.
+
+    Native attributes are real ``product.template`` columns, so a product that
+    does not carry the attribute still has a value for it: integer and float
+    columns default to ``0``, booleans to ``False``. Those need the
+    ``attribute_set_id`` leaf to keep non-carriers out of the results.
+
+    Relational columns are NULL when unset, so the leaf excludes nothing there
+    and only does harm: it drops products that legitimately hold the value but
+    sit on no attribute set at all.
+    """
+    return attribute.attribute_type not in RELATIONAL_ATTRIBUTE_TYPES
+
+
+def attribute_set_scope_leaves(attribute, set_ids):
+    """Return the ``attribute_set_id`` domain leaves for a value filter.
+
+    Empty for attribute types that need no scoping, so callers can splat the
+    result into a domain without branching.
+    """
+    if not needs_attribute_set_scope(attribute):
+        return []
+    return [("attribute_set_id", "in", list(set_ids))]
+
+
 def build_range_filter_domains(env, range_filters):
     """Translate ``{attr_id: {'min': x, 'max': y}}`` into a list of ORM
     sub-domains over ``product.template``.
@@ -158,11 +191,17 @@ def build_range_filter_domains(env, range_filters):
     would also match products that don't carry the attribute at all (especially
     when ``min`` is ``0`` or negative). The ``attribute_set_id`` leaf restricts
     the filter to the products that actually have the attribute, mirroring the
-    value filter in ``Website._search_get_details``.
+    value filter in ``Website._search_get_details``. It spans the attribute's
+    descendant sets, since child sets inherit their parent's attributes.
     """
     conditions = []
     Attribute = env["attribute.attribute"].sudo()
     pt_fields = env["product.template"]._fields
+    # Resolve the attribute-set hierarchy once for every range-filtered
+    # attribute instead of once per attribute inside the loop.
+    set_ids_per_attribute = (
+        Attribute.browse(list(range_filters)).exists()._get_all_set_ids_per_attribute()
+    )
     for attr_id, range_vals in range_filters.items():
         if not range_vals:
             continue
@@ -181,7 +220,7 @@ def build_range_filter_domains(env, range_filters):
             # the range constraint and list everything.
             conditions.append([("id", "in", ids)])
             continue
-        sub_domain = [("attribute_set_id", "in", attribute.attribute_set_ids.ids)]
+        sub_domain = [("attribute_set_id", "in", list(set_ids_per_attribute[attr_id]))]
         if "min" in range_vals:
             sub_domain.append((field_name, ">=", range_vals["min"]))
         if "max" in range_vals:
